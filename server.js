@@ -19,7 +19,21 @@ function getDockerStatus() {
     }
 }
 
-// Ambil ledger terbaru dari Horizon (fetch bawaan Node 18+)
+// Ambil status Core termasuk peers
+function getCoreStatus() {
+    try {
+        const output = execSync('pi-node protocol-status', { encoding: 'utf-8' });
+        const data = JSON.parse(output);
+        const ledger = data.info.ledger.num;
+        const state = data.info.state === 'Synced!' ? 'Synced ✅' : 'Error ❌';
+        const peers = data.info.peers.authenticated_count;
+        return { ledger, state, peers };
+    } catch(err) {
+        return { ledger: 0, state: 'Error ❌', peers: 'N/A' };
+    }
+}
+
+// Ambil ledger terbaru dari Horizon
 async function getHorizonStatus() {
     try {
         const res = await fetch(`${HORIZON_URL}/ledgers?order=desc&limit=1`);
@@ -38,22 +52,15 @@ async function getHorizonStatus() {
 // Endpoint API untuk frontend
 app.get('/api/status', async (req, res) => {
     const containerStatus = getDockerStatus();
+    const coreStatus = getCoreStatus();
     const horizonStatus = await getHorizonStatus();
-
-    // Core ledger estimasi = Horizon ledger
-    const coreLedger = horizonStatus.latestLedger;
-    const corePeers = 'N/A'; // Tidak tersedia
-    const syncProgress = coreLedger ? 100 : 0;
+    const syncProgress = 100; // Ledger Horizon/Core ada → sinkron
 
     res.json({
         containerStatus,
-        coreStatus: {
-            state: coreLedger ? 'Synced ✅' : 'Error ❌',
-            ledger: coreLedger,
-            peers: corePeers
-        },
+        coreStatus,
         horizonStatus,
-        syncProgress: syncProgress.toFixed(2)
+        syncProgress
     });
 });
 
