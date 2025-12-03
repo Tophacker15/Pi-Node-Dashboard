@@ -52,6 +52,8 @@ async function fetchStatus() {
         corePeersEl.innerText = data.coreStatus.peers;
         horizonLedgerEl.innerText = data.horizonStatus.latestLedger;
         horizonClosedAtEl.innerText = data.horizonStatus.closedAt;
+
+        // Progress bar
         syncProgressEl.style.width = data.syncProgress + '%';
         syncPercentEl.innerText = data.syncProgress + '%';
 
