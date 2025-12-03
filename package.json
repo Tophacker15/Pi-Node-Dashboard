@@ -1,0 +1,17 @@
+{
+  "name": "pi-node-dashboard",
+  "version": "1.0.0",
+  "description": "Realtime Pi Node Dashboard with Core, Horizon, Docker status and ledger chart",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "zendshost",
+  "license": "MIT",
+  "dependencies": {
+    "chart.js": "^4.4.0",
+    "ejs": "^3.1.9",
+    "express": "^4.18.2"
+  }
+}
