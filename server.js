@@ -1,74 +1,111 @@
-const express = require('express');
-const { execSync } = require('child_process');
-const app = express();
-const port = 3000;
+import express from 'express';
+import fetch from 'node-fetch';
+import cors from 'cors';
+import { exec } from 'child_process';
 
-const CONTAINER_NAME = 'mainnet';
+const app = express();
+const PORT = 3000;
+
+app.use(cors());
+app.use(express.static('public'));
+app.set('view engine', 'ejs');
+
 const HORIZON_URL = 'http://localhost:31401';
 
-app.set('view engine', 'ejs');
-app.use(express.static('public'));
-
-// Ambil status Docker container
-function getDockerStatus() {
-    try {
-        const output = execSync(`docker inspect -f '{{.State.Running}}' ${CONTAINER_NAME}`);
-        return output.toString().trim() === 'true' ? 'Running ✅' : 'Stopped ❌';
-    } catch(err) {
-        return 'Not found ❌';
-    }
+// ======= Helpers =======
+function execCommand(cmd) {
+    return new Promise((resolve) => {
+        exec(cmd, (err, stdout, stderr) => {
+            if (err) return resolve(stderr.trim() || 'Error');
+            resolve(stdout.trim());
+        });
+    });
 }
 
-// Ambil status Core termasuk peers
-function getCoreStatus() {
+async function fetchHorizonInfo() {
     try {
-        const output = execSync('pi-node protocol-status', { encoding: 'utf-8' });
-        const data = JSON.parse(output);
-        const ledger = data.info.ledger.num;
-        const state = data.info.state === 'Synced!' ? 'Synced ✅' : 'Error ❌';
-        const peers = data.info.peers.authenticated_count;
-        return { ledger, state, peers };
-    } catch(err) {
-        return { ledger: 0, state: 'Error ❌', peers: 'N/A' };
-    }
-}
-
-// Ambil ledger terbaru dari Horizon
-async function getHorizonStatus() {
-    try {
-        const res = await fetch(`${HORIZON_URL}/ledgers?order=desc&limit=1`);
+        const res = await fetch(`${HORIZON_URL}/`);
         const data = await res.json();
-        const ledger = data._embedded.records[0];
         return {
-            latestLedger: ledger.sequence,
-            closedAt: ledger.closed_at
+            horizonVersion: data.horizon_version || '-',
+            coreVersion: data.core_version || '-',
+            ingestLatestLedger: data.ingest_latest_ledger ?? 0,
+            historyLatestLedger: data.history_latest_ledger ?? 0,
+            historyLedgerClosedAt: data.history_latest_ledger_closed_at || '-',
+            coreLatestLedger: data.core_latest_ledger ?? 0,
+            networkPassphrase: data.network_passphrase || '-',
+            currentProtocolVersion: data.current_protocol_version ?? 0,
+            supportedProtocolVersion: data.supported_protocol_version ?? 0,
+            coreSupportedProtocolVersion: data.core_supported_protocol_version ?? 0
         };
-    } catch(err) {
+    } catch (err) {
         console.error('Horizon fetch error:', err);
-        return { latestLedger: 0, closedAt: null };
+        return {
+            horizonVersion: '-',
+            coreVersion: '-',
+            ingestLatestLedger: 0,
+            historyLatestLedger: 0,
+            historyLedgerClosedAt: '-',
+            coreLatestLedger: 0,
+            networkPassphrase: '-',
+            currentProtocolVersion: 0,
+            supportedProtocolVersion: 0,
+            coreSupportedProtocolVersion: 0
+        };
     }
 }
 
-// Endpoint API untuk frontend
+// ======= Routes =======
+app.get('/', (req, res) => {
+    res.render('index');
+});
+
 app.get('/api/status', async (req, res) => {
-    const containerStatus = getDockerStatus();
-    const coreStatus = getCoreStatus();
-    const horizonStatus = await getHorizonStatus();
-    const syncProgress = 100; // Ledger Horizon/Core ada → sinkron
+    // Docker container status
+    const dockerStatus = await execCommand('docker ps --filter "name=mainnet" --format "{{.Status}}"');
+    const containerStatus = dockerStatus.includes('Up') ? 'Running ✅' : 'Stopped ❌';
+
+    // Stellar Core (via pi-node protocol-status JSON)
+    let coreStatus = { state: 'Error ❌', ledger: 0, peers: 'N/A' };
+    try {
+        const coreRaw = await execCommand('docker exec mainnet pi-node protocol-status');
+        const coreJson = JSON.parse(coreRaw);
+        coreStatus = {
+            state: coreJson.info.state || 'Error ❌',
+            ledger: coreJson.info.ledger.num || 0,
+            peers: coreJson.info.peers.authenticated_count ?? 0
+        };
+    } catch (err) {
+        console.error('Core fetch error:', err);
+    }
+
+    // Horizon
+    let horizonStatus = { latestLedger: 0, closedAt: '-' };
+    try {
+        const horizonRes = await fetch(`${HORIZON_URL}/`);
+        const horizonData = await horizonRes.json();
+        horizonStatus.latestLedger = horizonData.core_latest_ledger ?? 0;
+        horizonStatus.closedAt = horizonData.history_latest_ledger_closed_at || '-';
+    } catch (err) {
+        console.error('Horizon status error:', err);
+    }
+
+    // Horizon info
+    const horizonInfo = await fetchHorizonInfo();
+
+    // Sync Progress (basic estimate)
+    let syncProgress = 0;
+    if (horizonStatus.latestLedger && coreStatus.ledger) {
+        syncProgress = ((horizonStatus.latestLedger / coreStatus.ledger) * 100).toFixed(2);
+    }
 
     res.json({
         containerStatus,
         coreStatus,
         horizonStatus,
+        horizonInfo,
         syncProgress
     });
 });
 
-// Halaman utama
-app.get('/', (req, res) => {
-    res.render('index');
-});
-
-app.listen(port, () => {
-    console.log(`Pi Node Dashboard running at http://localhost:${port}`);
-});
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
