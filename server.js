@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
 
-const HORIZON_URL = 'http://localhost:31401';
+const HORIZON_URL = 'http://4.194.35.14:31401';
 
 // Run shell commands safely
 function execCommand(cmd) {
