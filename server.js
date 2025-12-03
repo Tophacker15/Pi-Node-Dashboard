@@ -16,7 +16,7 @@ const HORIZON_URL = 'http://localhost:31401';
 function execCommand(cmd) {
     return new Promise((resolve) => {
         exec(cmd, (err, stdout, stderr) => {
-            if (err) return resolve(stderr.trim() || 'Error');
+            if (err) return resolve(null);
             resolve(stdout.trim());
         });
     });
@@ -36,11 +36,9 @@ async function fetchHorizonInfo() {
             networkPassphrase: data.network_passphrase || '-',
             currentProtocolVersion: data.current_protocol_version ?? 0,
             supportedProtocolVersion: data.supported_protocol_version ?? 0,
-            coreSupportedProtocolVersion: data.core_supported_protocol_version ?? 0,
-            peers: data.peers?.authenticated_count ?? 'N/A'
+            coreSupportedProtocolVersion: data.core_supported_protocol_version ?? 0
         };
-    } catch (err) {
-        console.error('Horizon fetch error:', err);
+    } catch {
         return {
             horizonVersion: '-',
             coreVersion: '-',
@@ -51,10 +49,31 @@ async function fetchHorizonInfo() {
             networkPassphrase: '-',
             currentProtocolVersion: 0,
             supportedProtocolVersion: 0,
-            coreSupportedProtocolVersion: 0,
-            peers: 'N/A'
+            coreSupportedProtocolVersion: 0
         };
     }
+}
+
+async function fetchCoreStatus() {
+    const defaultStatus = { state: 'Error ❌', ledger: 0, peers: 'N/A' };
+
+    const raw = await execCommand('pi-node protocol-status');
+
+    if (!raw) return defaultStatus;
+
+    let json;
+    try {
+        json = JSON.parse(raw);
+    } catch {
+        console.log("Gagal parse Core JSON (ini normal jika belum sync)");
+        return defaultStatus;
+    }
+
+    return {
+        state: json?.info?.state === 'Synced!' ? 'Synced ✅' : json?.info?.state || 'Error ❌',
+        ledger: json?.info?.ledger?.num ?? 0,
+        peers: json?.info?.peers?.authenticated_count ?? 'N/A'
+    };
 }
 
 // ===== Routes =====
@@ -63,18 +82,11 @@ app.get('/', (req, res) => {
 });
 
 app.get('/api/status', async (req, res) => {
-    // Docker container status
-    const dockerStatusRaw = await execCommand('docker ps --filter "name=mainnet" --format "{{.Status}}"');
-    const containerStatus = dockerStatusRaw.includes('Up') ? 'Running ✅' : 'Stopped ❌';
+    const containerRaw = await execCommand('docker ps --filter "name=mainnet" --format "{{.Status}}"');
+    const containerStatus = containerRaw?.includes('Up') ? 'Running ✅' : 'Stopped ❌';
 
-    // Horizon + Core info
+    const coreStatus = await fetchCoreStatus();
     const horizonInfo = await fetchHorizonInfo();
-
-    const coreStatus = {
-        state: horizonInfo.coreLatestLedger > 0 ? 'Synced ✅' : 'Error ❌',
-        ledger: horizonInfo.coreLatestLedger,
-        peers: horizonInfo.peers
-    };
 
     const horizonStatus = {
         latestLedger: horizonInfo.coreLatestLedger,
