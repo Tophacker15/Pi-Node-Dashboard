@@ -1,42 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Pi Node Dashboard</title>
-    <link rel="stylesheet" href="/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pi Node Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Pi Node Dashboard</h1>
+  <div class="container">
+    <h1>Pi Node Dashboard</h1>
 
-        <div class="card">
-            <h2>Docker Container</h2>
-            <p>Status: <strong id="dockerStatus">Loading...</strong></p>
-        </div>
+    <div class="cards">
+      <div class="card">
+        <h3>Docker Container</h3>
+        <p>Status: <span id="dockerStatus">Loading...</span></p>
+      </div>
 
-        <div class="card">
-            <h2>Stellar Core</h2>
-            <p>Status: <strong id="coreState">Loading...</strong></p>
-            <p>Ledger: <strong id="coreLedger">0</strong></p>
-            <p>Peers: <strong id="corePeers">N/A</strong></p>
-        </div>
+      <div class="card">
+        <h3>Stellar Core</h3>
+        <p>Status: <span id="coreState">Loading...</span></p>
+        <p>Ledger: <span id="coreLedger">0</span></p>
+        <p>Peers: <span id="corePeers">0</span></p>
+      </div>
 
-        <div class="card">
-            <h2>Horizon</h2>
-            <p>Latest Ledger: <strong id="horizonLedger">0</strong></p>
-            <p>Ledger Closed At: <strong id="horizonClosedAt">-</strong></p>
-            <div class="progress-bar">
-                <div class="progress" id="syncProgress"></div>
-            </div>
-            <p>Sync Progress: <strong id="syncPercent">0%</strong></p>
-        </div>
+      <div class="card">
+        <h3>Horizon</h3>
+        <p>Latest Ledger: <span id="horizonLedger">0</span></p>
+        <p>Ledger Closed At: <span id="horizonClosedAt">-</span></p>
+      </div>
 
-        <div class="card">
-            <canvas id="ledgerChart"></canvas>
+      <div class="card">
+        <h3>Sync Progress</h3>
+        <div class="progress-bar">
+          <div id="syncProgress"></div>
         </div>
+        <p id="syncPercent">0%</p>
+      </div>
+
+      <div class="card chart-card">
+        <h3>Ledger Chart (Horizon)</h3>
+        <canvas id="ledgerChart" height="200"></canvas>
+      </div>
+
+      <div class="card">
+        <h3>Horizon & Core Info</h3>
+        <p>Horizon Version: <span id="horizonVersion">-</span></p>
+        <p>Core Version: <span id="coreVersion">-</span></p>
+        <p>Ingest Latest Ledger: <span id="ingestLatestLedger">0</span></p>
+        <p>History Latest Ledger: <span id="historyLatestLedger">0</span></p>
+        <p>History Ledger Closed At: <span id="historyLedgerClosedAt">-</span></p>
+        <p>Core Latest Ledger: <span id="coreLatestLedger">0</span></p>
+        <p>Network Passphrase: <span id="networkPassphrase">-</span></p>
+        <p>Protocol Version: <span id="currentProtocolVersion">0</span></p>
+        <p>Supported Protocol Version: <span id="supportedProtocolVersion">0</span></p>
+      </div>
     </div>
+  </div>
 
-    <script src="/script.js"></script>
+  <script src="/script.js"></script>
 </body>
 </html>
