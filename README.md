@@ -19,7 +19,7 @@ Dashboard Modern & Real-Time untuk Monitoring Pi Network Node (Stellar-Core + Ho
 > *(Ganti URL saat kamu upload screenshot nanti)*
 
 <p align="center">
-  <img src="https://via.placeholder.com/900x450?text=Pi+Node+Dashboard+Preview" />
+  <img src="[https://via.placeholder.com/900x450?text=Pi+Node+Dashboard+Preview](https://raw.githubusercontent.com/zendshost/Pi-Node-Dashboard/refs/heads/main/demo.jpg)" />
 </p>
 
 ---
